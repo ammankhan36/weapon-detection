@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Shield AI - Autonomous Weapon Detection and Threat Monitoring System">
+  <title>Shield AI | Real-time Weapon Detection System</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff2a51'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+  <!-- Top Background Ambient Glow -->
+  <div class="ambient-glow" aria-hidden="true"></div>
+
+  <!-- Main Container -->
+  <div class="app-layout">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-icon-wrapper">
+          <svg class="brand-shield-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M12 8v5"/>
+            <circle cx="12" cy="16" r="1" fill="currentColor"/>
+          </svg>
+          <span class="radar-ping"></span>
+        </div>
+        <div>
+          <h1 class="brand-title">SHIELD AI <span class="badge-tag">TACTICAL SEC</span></h1>
+          <p class="brand-subtitle">Automated YOLOv5 Weapon Detection & Threat Surveillance</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Backend Status Indicator -->
+        <div id="backend-status-card" class="status-indicator-badge checking">
+          <span class="status-dot"></span>
+          <span id="backend-status-text">Connecting to Backend...</span>
+          <button id="btn-reconnect" class="icon-btn-minimal" title="Test / Retry Backend Connection">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          </button>
+        </div>
+
+        <!-- Audio Alert Toggle -->
+        <button id="btn-toggle-sound" class="btn-secondary sound-btn" title="Toggle Audio Siren">
+          <svg id="icon-sound-on" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <svg id="icon-sound-off" class="hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+          <span id="sound-label">Audio Alert: ON</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Global Threat Alert Banner (Hidden by default, triggered on threat) -->
+    <section id="alert-banner" class="alert-banner hidden" role="alert" aria-live="assertive">
+      <div class="alert-pulse-bg"></div>
+      <div class="alert-content">
+        <div class="alert-icon-ring">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div class="alert-text-block">
+          <span class="alert-tagline">CRITICAL THREAT DETECTED</span>
+          <h2 id="alert-message" class="alert-headline">WEAPON DETECTED: Handgun (92%)</h2>
+        </div>
+      </div>
+      <div class="alert-meta">
+        <span id="alert-timestamp" class="alert-time">--:--:--</span>
+        <button id="btn-dismiss-alert" class="alert-close-btn" title="Dismiss Alert">&times;</button>
+      </div>
+    </section>
+
+    <!-- Stats Ticker Bar -->
+    <div class="stats-ticker">
+      <div class="stat-pill">
+        <span class="stat-label">Model Target:</span>
+        <span class="stat-val highlight">YOLOv5 (best.pt)</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">Classes:</span>
+        <span class="stat-val">Handgun, Knife, Rifle, Sword</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">Active Threats:</span>
+        <span id="stat-active-count" class="stat-val danger-text">0</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">Total Logged:</span>
+        <span id="stat-total-logged" class="stat-val">0</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">Inference Time:</span>
+        <span id="stat-latency" class="stat-val">-- ms</span>
+      </div>
+      <div class="stat-pill" id="stat-fps-pill">
+        <span class="stat-label">Stream FPS:</span>
+        <span id="stat-fps" class="stat-val">0.0</span>
+      </div>
+    </div>
+
+    <!-- Mode Navigation Tabs -->
+    <nav class="mode-tabs" role="tablist">
+      <button id="tab-image" class="tab-btn active" role="tab" aria-selected="true" data-tab="image">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span>Image Inspector</span>
+      </button>
+      <button id="tab-video" class="tab-btn" role="tab" aria-selected="false" data-tab="video">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        <span>Video Scanner</span>
+      </button>
+      <button id="tab-webcam" class="tab-btn" role="tab" aria-selected="false" data-tab="webcam">
+        <span class="live-dot-icon"></span>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span>Live Webcam</span>
+      </button>
+    </nav>
+
+    <!-- Main Workspace Grid (Left: Preview / Upload, Right: Detections & Controls) -->
+    <main class="workspace-grid">
+      
+      <!-- LEFT COLUMN: Preview & Visualizer -->
+      <section class="viewport-card">
+        <div class="viewport-header">
+          <div class="viewport-title-group">
+            <span class="terminal-symbol">&gt;_</span>
+            <h2 id="viewport-mode-title" class="viewport-title">IMAGE INFERENCE VIEWPORT</h2>
+          </div>
+          
+          <div class="viewport-controls">
+            <!-- Sample Test Quick Load -->
+            <button id="btn-load-sample" class="btn-outline-cyan" title="Load sample gun picture (OIP.jpg)">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1m-4-8-4-4m0 0L8 8m4-4v12"/></svg>
+              <span>Load Sample Weapon</span>
+            </button>
+
+            <!-- Download Annotated Result -->
+            <button id="btn-download-result" class="btn-secondary" disabled title="Download annotated result with bounding boxes">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Download Result</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Preview Stage Canvas Area -->
+        <div class="preview-stage" id="preview-stage">
+          <!-- Scanning Laser Animation Line -->
+          <div id="scanner-line" class="scanner-line hidden"></div>
+          
+          <!-- Crosshair Overlay Grid -->
+          <div class="grid-crosshairs" aria-hidden="true">
+            <span class="corner-ch ch-tl"></span>
+            <span class="corner-ch ch-tr"></span>
+            <span class="corner-ch ch-bl"></span>
+            <span class="corner-ch ch-br"></span>
+          </div>
+
+          <!-- Empty Dropzone State -->
+          <div id="dropzone-empty" class="dropzone-empty">
+            <div class="upload-icon-circle">
+              <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.75">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+            </div>
+            <h3 class="dropzone-title">Drag & Drop Image or Video Here</h3>
+            <p class="dropzone-desc">Supports PNG, JPG, WEBP, MP4, WEBM</p>
+            <div class="dropzone-btn-row">
+              <label for="file-input-image" class="btn-primary pointer">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span>Select Image</span>
+              </label>
+              <input type="file" id="file-input-image" accept="image/*" class="hidden-input">
+
+              <label for="file-input-video" class="btn-secondary pointer hidden" id="video-input-label">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                <span>Select Video</span>
+              </label>
+              <input type="file" id="file-input-video" accept="video/*" class="hidden-input">
+            </div>
+          </div>
+
+          <!-- Media Display Elements -->
+          <img id="image-display" class="preview-media hidden" alt="Annotated Preview">
+          <video id="video-display" class="preview-media hidden" playsinline controls></video>
+          <video id="webcam-display" class="preview-media hidden" autoplay playsinline muted></video>
+          
+          <!-- High Performance Overlay Canvas for WebCam & Video Boxes -->
+          <canvas id="overlay-canvas" class="overlay-canvas hidden"></canvas>
+
+          <!-- Loading Spinner Overlay -->
+          <div id="preview-loader" class="preview-loader hidden">
+            <div class="tactical-spinner"></div>
+            <p id="loader-status-msg" class="loader-text">RUNNING YOLOv5 INFERENCE...</p>
+          </div>
+        </div>
+
+        <!-- Controls Toolbar Under Preview -->
+        <div class="viewport-footer">
+          <!-- Webcam Actions -->
+          <div id="webcam-controls" class="toolbar-group hidden">
+            <button id="btn-start-webcam" class="btn-primary">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Start Live Camera</span>
+            </button>
+            <button id="btn-stop-webcam" class="btn-danger hidden">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>
+              <span>Stop Camera</span>
+            </button>
+            <button id="btn-snapshot-webcam" class="btn-secondary hidden" title="Snap high-res photo">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              <span>Snapshot</span>
+            </button>
+          </div>
+
+          <!-- Video Processing Actions -->
+          <div id="video-controls" class="toolbar-group hidden">
+            <button id="btn-process-video" class="btn-primary" disabled>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Start Video Threat Scan</span>
+            </button>
+          </div>
+
+          <!-- Image Re-run Action -->
+          <div id="image-controls" class="toolbar-group">
+            <button id="btn-re-detect" class="btn-primary" disabled>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              <span>Re-run Detection</span>
+            </button>
+            <button id="btn-clear-preview" class="btn-secondary" disabled>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <span>Clear</span>
+            </button>
+          </div>
+
+          <div class="stream-indicators">
+            <span class="indicator-item"><span class="dot live-green"></span> HD Sensor Feed</span>
+            <span class="indicator-item"><span class="dot live-red"></span> Threat AI Active</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: Detections & Settings Panel -->
+      <aside class="sidebar-card">
+        
+        <!-- Threshold Controls Panel -->
+        <div class="settings-panel">
+          <div class="panel-header">
+            <h3 class="panel-title">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+              DETECTION THRESHOLDS
+            </h3>
+          </div>
+
+          <!-- Confidence Slider -->
+          <div class="control-row">
+            <div class="slider-header">
+              <label for="conf-slider" class="slider-label">Confidence Threshold</label>
+              <span id="conf-val" class="slider-value">50%</span>
+            </div>
+            <input type="range" id="conf-slider" min="0.10" max="0.95" step="0.05" value="0.50" class="cyber-slider">
+            <div class="slider-scale">
+              <span>10% (High Recall)</span>
+              <span>50% (Default)</span>
+              <span>95% (High Precision)</span>
+            </div>
+          </div>
+
+          <!-- NMS IoU Slider -->
+          <div class="control-row">
+            <div class="slider-header">
+              <label for="iou-slider" class="slider-label">IoU Overlap Threshold</label>
+              <span id="iou-val" class="slider-value">45%</span>
+            </div>
+            <input type="range" id="iou-slider" min="0.10" max="0.90" step="0.05" value="0.45" class="cyber-slider">
+          </div>
+        </div>
+
+        <!-- Detections Real-time Feed -->
+        <div class="detections-panel">
+          <div class="panel-header">
+            <div class="panel-title-with-badge">
+              <h3 class="panel-title">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+                ACTIVE TARGETS
+              </h3>
+              <span id="badge-total-found" class="count-badge zero">0 Found</span>
+            </div>
+            <button id="btn-export-json" class="link-btn" title="Download raw detection JSON">Export JSON</button>
+          </div>
+
+          <!-- Detection Cards List -->
+          <div id="detections-list" class="detections-list">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <p>No weapons currently detected in viewport.</p>
+              <span>Upload an image/video or activate webcam feed.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Target Classes Threat Matrix -->
+        <div class="threat-matrix-card">
+          <h4 class="matrix-title">TARGET CLASSIFICATION REGISTER</h4>
+          <div class="matrix-grid">
+            <div class="matrix-item" data-class="Handgun">
+              <span class="matrix-color dot-red"></span>
+              <span class="matrix-name">Handgun</span>
+              <span class="matrix-status" id="count-handgun">0</span>
+            </div>
+            <div class="matrix-item" data-class="Knife">
+              <span class="matrix-color dot-orange"></span>
+              <span class="matrix-name">Knife</span>
+              <span class="matrix-status" id="count-knife">0</span>
+            </div>
+            <div class="matrix-item" data-class="Rifle">
+              <span class="matrix-color dot-crimson"></span>
+              <span class="matrix-name">Rifle</span>
+              <span class="matrix-status" id="count-rifle">0</span>
+            </div>
+            <div class="matrix-item" data-class="Sword">
+              <span class="matrix-color dot-purple"></span>
+              <span class="matrix-name">Sword</span>
+              <span class="matrix-status" id="count-sword">0</span>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+    </main>
+
+    <!-- Bottom Section: Alert History & Snapshot Log -->
+    <section class="history-section">
+      <div class="history-header">
+        <div class="history-title-group">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 14 14"/>
+          </svg>
+          <h3 class="history-title">SECURITY EVENT TIMELINE & SNAPSHOT AUDIT</h3>
+        </div>
+        <div class="history-actions">
+          <button id="btn-clear-history" class="btn-secondary btn-sm" title="Clear log timeline">Clear Timeline</button>
+        </div>
+      </div>
+
+      <!-- Snapshot Log Horizontal Scroller -->
+      <div id="history-log-list" class="history-log-list">
+        <div class="history-empty" id="history-empty">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          <p>No past security incident alerts recorded yet.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Snapshot Modal for Full Inspection -->
+    <div id="snapshot-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-container">
+        <div class="modal-header">
+          <h4 id="modal-title" class="modal-headline">Audit Snapshot Inspection</h4>
+          <button id="btn-close-modal" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <img id="modal-image" src="" alt="Snapshot Full View">
+          <div id="modal-details" class="modal-details"></div>
+        </div>
+        <div class="modal-footer">
+          <a id="btn-modal-download" class="btn-primary" download="threat_snapshot.jpg">Download Image</a>
+          <button id="btn-modal-dismiss" class="btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fallback Offline Banner (shown only when backend is disconnected) -->
+    <div id="offline-toast" class="offline-toast hidden">
+      <div class="toast-content">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div>
+          <strong>Backend API Offline (http://127.0.0.1:8000)</strong>
+          <p>Running in Interactive UI Simulation Mode. Start <code>python server.py</code> in <code>backend/</code> to enable live model inference.</p>
+        </div>
+      </div>
+      <button id="btn-retry-backend-toast" class="btn-sm btn-primary">Connect Backend</button>
+    </div>
+
+  </div>
+
+  <!-- Main JavaScript Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
